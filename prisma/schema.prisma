@@ -10,6 +10,149 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id           Int    @id @default(autoincrement())
+  studentId    String @default("")
+  firstName    String
+  lastName     String
+  email        String @unique
+  role         String
+  refreshToken String
+
+  account               Account?
+  classes               Class[]
+  grades                Grade[]
+  points                Point[]
+  comments              Comment[]
+  reviews               Review[]
+  sentNotifications     Notification[] @relation("sentNotifications")
+  receivedNotifications Notification[] @relation("receivedNotifications")
+
+  @@map("users")
+}
+
+model Account {
+  userId   Int    @id @unique
+  username String @unique
+  password String
+  status   String
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("accounts")
+}
+
+model Class {
+  id          Int    @id @default(autoincrement())
+  code        String
+  name        String
+  teacherId   Int
+  inviteCode  String
+  status      String
+  theme       String @default("1a.jpg")
+  description String @default("No description")
+
+  teacher      User               @relation(fields: [teacherId], references: [id])
+  students     Grade[]
+  compositions GradeComposition[]
+
+  @@map("classes")
+}
+
+model Grade {
+  id        Int   @id @default(autoincrement())
+  studentId Int
+  classId   Int
+  overall   Float @default(0)
+
+  student User  @relation(fields: [studentId], references: [id])
+  class   Class @relation(fields: [classId], references: [id])
+
+  @@map("grades")
+}
+
+model GradeComposition {
+  id       Int    @id @default(autoincrement())
+  classId  Int    @default(0)
+  position Int
+  name     String
+  scale    Float
+
+  class Class  @relation(fields: [classId], references: [id])
+  exams Exam[]
+
+  @@map("grade_compositions")
+}
+
+model Exam {
+  id                 Int      @id @default(autoincrement())
+  gradeCompositionId Int
+  name               String
+  dueDate            DateTime @default(now())
+  position           Int      @default(-1)
+  isFinalized        Boolean  @default(false)
+
+  gradeComposition GradeComposition @relation(fields: [gradeCompositionId], references: [id])
+  points           Point[]
+  reviews          Review[]
+
+  @@map("exams")
+}
+
+model Point {
+  studentId Int
+  examId    Int
+  point     Float @default(-1)
+
+  student User @relation(fields: [studentId], references: [id])
+  exam    Exam @relation(fields: [examId], references: [id])
+
+  @@id([studentId, examId])
+  @@map("points")
+}
+
+model Review {
+  id               Int    @id @default(autoincrement())
+  examId           Int
+  reporterId       Int
+  expectationPoint Float
+  explaination     String
+  status           String
+
+  exam     Exam      @relation(fields: [examId], references: [id])
+  reporter User      @relation(fields: [reporterId], references: [id])
+  comments Comment[]
+
+  @@map("reviews")
+}
+
+model Comment {
+  id       Int    @id @default(autoincrement())
+  reviewId Int
+  userId   Int
+  content  String
+
+  review Review @relation(fields: [reviewId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@map("comments")
+}
+
+model Notification {
+  id         Int      @id @default(autoincrement())
+  reporterId Int
+  receiverId Int
+  postId     Int
+  action     String   @default("commented")
+  isSeen     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  reporter User @relation("sentNotifications", fields: [reporterId], references: [id])
+  receiver User @relation("receivedNotifications", fields: [receiverId], references: [id])
+
+  @@map("notifications")
+}
+
 model Game {
   id         Int    @id @default(autoincrement())
   name       String @default("Player Name")
